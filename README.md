@@ -1,106 +1,95 @@
 # HabitTracker
 
-A habit-tracking application. This is a monorepo containing a Bun/TypeScript backend
-backed by Prisma and PostgreSQL.
+A small timezone-aware habit tracker. Users create habits, check in once per local
+calendar day, backfill past days, and view current and longest streaks.
 
-> **Note:** This project was scaffolded with `bun init`. The `frontend/` directory is
-> reserved for the application frontend, which will be documented here once it is added.
+## Features
 
-## Tech Stack
+- Email/password authentication with bcrypt password hashing and JWT sessions.
+- IANA timezone selected during registration.
+- Habit CRUD with owner isolation.
+- One check-in per habit per user-local day.
+- Check-in UTC instant and counted local date stored separately.
+- Today check-in, backfill, history, deletion, and clear API errors.
+- Server-side current and longest streak calculations.
+- PostgreSQL database-level uniqueness for duplicate prevention.
+- Optional Docker Compose setup for PostgreSQL, API, and frontend.
 
-| Layer     | Technology                                            |
-| --------- | ----------------------------------------------------- |
-| Runtime   | [Bun](https://bun.com) – fast all-in-one JS runtime   |
-| Language  | TypeScript (strict, ESM, Bun bundle mode)             |
-| ORM       | [Prisma](https://prisma.io) 7.x                       |
-| Database  | PostgreSQL                                            |
+## Local-day model
 
-## Project Structure
+The server calculates a user's local date with `Intl.DateTimeFormat` and the stored
+IANA timezone. A check-in stores `localDate` as a PostgreSQL `DATE` and `checkedAt`
+as a UTC timestamp. Streaks compare only `localDate` values, never elapsed hours.
 
-```
-HabitTracker/
-├── backend/                  # Bun + TypeScript + Prisma API
-│   ├── index.ts             # Application entrypoint
-│   ├── package.json         # Bun package manifest & dependencies
-│   ├── prisma.config.ts     # Prisma config (reads DATABASE_URL)
-│   ├── prisma/
-│   │   └── schema.prisma    # Prisma schema (client generated to ./generated)
-│   ├── tsconfig.json        # TypeScript / Bun compiler options
-│   └── README.md            # Auto-generated backend README (bun init)
-└── frontend/                 # (coming soon)
-```
+`currentStreak` ends on today when today is checked in. If today is not checked in,
+it ends on yesterday. `longestStreak` is the longest consecutive run in the history.
+Both values are calculated on the server and are never inferred by the frontend.
 
-## Prerequisites
+## Setup
 
-- [Bun](https://bun.com) runtime (project was created with bun v1.3.14+)
-- Node.js (for Bun tooling)
-- A PostgreSQL database
-
-## Getting Started
-
-### 1. Configure environment
-
-Copy the example env file and fill in your database connection string:
+Requirements: Bun 1.x, PostgreSQL, and optionally Docker.
 
 ```bash
-cp .env.example backend/.env
-```
-
-Then edit `backend/.env` and set `DATABASE_URL` to your PostgreSQL connection string:
-
-```
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public
-```
-
-> `.env` is gitignored. Never commit real credentials.
-
-### 2. Install dependencies
-
-```bash
+docker compose up -d postgres
 cd backend
+cp .env.example .env
+```
+
+Set `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_URL`, and `PORT` in `backend/.env`.
+
+```bash
 bun install
+bun run prisma:migrate
+bun run dev
 ```
 
-### 3. Generate the Prisma client and set up the database
-
-Prisma commands are run through Bun. From `backend/`:
+In another terminal:
 
 ```bash
-# Generate the typed Prisma client (schema -> ./generated)
-bun --bun run prisma generate
-
-# Push the schema to your database (no migration files)
-bun --bun run prisma db push
+cd frontend
+bun install
+bun run dev
 ```
 
-### 4. Run the backend
+Open `http://localhost:5173`.
+
+## Full Docker stack
+
+Create a root `.env` containing a strong `JWT_SECRET`, then run:
+
+```bash
+docker compose up --build
+```
+
+The frontend is available at `http://localhost:8080` and the API at
+`http://localhost:3001`.
+
+## API
+
+Authenticated routes use `Authorization: Bearer <token>`.
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| POST | `/api/auth/register` | Register with email, password, timezone |
+| POST | `/api/auth/login` | Log in |
+| GET | `/api/auth/me` | Get the current user |
+| POST | `/api/habits` | Create a habit |
+| GET | `/api/habits` | List owned habits |
+| GET | `/api/habits/:id` | Get an owned habit |
+| PATCH | `/api/habits/:id` | Update an owned habit |
+| DELETE | `/api/habits/:id` | Delete an owned habit |
+| POST | `/api/habits/:habitId/check-ins` | Check in with `{ "date": "YYYY-MM-DD" }` |
+| GET | `/api/habits/:habitId/check-ins` | List history |
+| DELETE | `/api/habits/:habitId/check-ins/:date` | Remove a check-in |
+| GET | `/api/dashboard` | Owned habits with server-calculated streaks |
+
+## Tests
 
 ```bash
 cd backend
-bun run index.ts
+bun test
+bun run typecheck
 ```
 
-The backend currently prints `Hello via Bun!` — this is the scaffolded entrypoint where
-the application server will be wired up.
-
-## Development Commands
-
-| Command                          | Description                                  |
-| -------------------------------- | -------------------------------------------- |
-| `bun install`                    | Install dependencies (package.json)          |
-| `bun run index.ts`               | Run the backend entrypoint                   |
-| `bun --bun run prisma generate`  | Generate the typed Prisma client             |
-| `bun --bun run prisma db push`   | Push the schema to the database              |
-| `bun --bun run prisma migrate`   | Create & apply migrations                    |
-
-## Environment Variables
-
-| Variable        | Required | Description                                                                  |
-| --------------- | -------- | ---------------------------------------------------------------------------- |
-| `DATABASE_URL`  | Yes       | PostgreSQL connection string used by Prisma (`prisma.config.ts` reads it).   |
-
-## Notes
-
-- Scaffolded with `bun init` – see `backend/README.md` for the auto-generated backend notes.
-- `.gitignore` at the repo root covers secrets, dependencies, build output, and the
-  Prisma generated client. Your existing `backend/.gitignore` also remains in place.
+Tests cover timezone conversion, IANA validation, local-date validation, duplicate
+dates, future dates, dates before habit creation, backfill, and streak edge cases.
