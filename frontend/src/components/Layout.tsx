@@ -8,7 +8,7 @@ export default function Layout() {
   return (
     <div className="app">
       <header className="topbar">
-        <Link to="/" className="brand">◼ HabitTracker</Link>
+        <Link to="/" className="brand">◼ HabitTracer</Link>
         <nav>
           <Link to="/">Dashboard</Link>
           {user && <span className="email">{user.email} · {user.timezone}</span>}

@@ -6,7 +6,7 @@
 .env.production.local
 
 node_modules
-bun.lock
+
 skills-lock.json
 
 out
