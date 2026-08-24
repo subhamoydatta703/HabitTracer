@@ -1,0 +1,48 @@
+# ─── Environment / secrets ────────────────────────────────────────────
+# Never commit real credentials. Copy .env.example -> .env and fill in.
+.env
+.env.*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ─── Dependencies (bun install) ───────────────────────────────────────
+node_modules
+bun.lock
+skills-lock.json
+
+# ─── Output / build ──────────────────────────────────────────────────
+out
+dist
+*.tgz
+coverage
+*.lcov
+
+# ─── Logs ────────────────────────────────────────────────────────────
+logs
+*.log
+report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+
+# ─── Prisma generated client ─────────────────────────────────────────
+generated/
+src/generated/
+**/generated/
+**/src/generated/
+
+# ─── Editor / OS ─────────────────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/
+*.tsbuildinfo
+.eslintcache
+.cache
+*.swp
+*.swo
+*~
+
+# ─── Tool / agent metadata (per-machine) ─────────────────────────────
+.agents/
+.claude/
+.windsurf/
+.neon
