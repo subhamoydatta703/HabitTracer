@@ -1,6 +1,7 @@
 FROM oven/bun:1 AS build
 
 WORKDIR /app
+ENV DATABASE_URL=postgresql://postgres:postgres@localhost:5432/habittracker?schema=public
 COPY package.json bun.lock ./
 RUN bun install --no-save
 
