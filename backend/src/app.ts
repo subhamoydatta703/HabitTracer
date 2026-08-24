@@ -11,6 +11,12 @@ import { createRateLimiter } from "./middleware/rate-limit";
 
 export function createApp(): Express {
   const app = express();
+  const allowedOrigins = new Set(
+    config.frontendUrl
+      .split(",")
+      .map((origin) => origin.trim().replace(/\/$/, ""))
+      .filter(Boolean),
+  );
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
   app.use((_req, res, next) => {
@@ -23,7 +29,13 @@ export function createApp(): Express {
 
   app.use(
     cors({
-      origin: config.frontendUrl,
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.has(origin.replace(/\/$/, ""))) {
+          callback(null, true);
+          return;
+        }
+        callback(null, false);
+      },
       credentials: false,
     }),
   );
