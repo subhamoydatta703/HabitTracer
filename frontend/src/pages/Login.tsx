@@ -22,7 +22,12 @@ export default function Login() {
       login(data.token, data.user);
       navigate("/");
     } catch (err: unknown) {
-      const msg = (err as any)?.response?.data?.error ?? "Login failed";
+      const status = (err as any)?.response?.status;
+      const msg = status === 401
+        ? "Invalid email or password"
+        : status === 404
+          ? "Login service is unavailable"
+          : (err as any)?.response?.data?.error ?? "Login failed";
       setError(msg);
     } finally {
       setBusy(false);
